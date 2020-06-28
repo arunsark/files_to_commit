@@ -1,0 +1,21 @@
+# File extensions
+*.iml
+*.tgz
+.idea/
+
+# Hidden Files
+.env
+**/.DS_Store
+
+
+# Hidden directories
+
+# Files
+npm-debug.log
+proxy-server.log
+*/**/package-lock.json
+
+# Directories
+**/node_modules/
+**/target/
+.test/
