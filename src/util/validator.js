@@ -18,11 +18,16 @@ function validatePath(expectedPath) {
     if ( cwd.match(expectedPathRegex) )
         return {}
     else
-        return { warn: 'Not running in the correct path'}
+        return { warn: `Not running in the correct path. Run it from ${expectedPath}` }
+}
+
+function validateEnv(env) {
+    return (!!env.COMMIT_REPOS);
 }
 
 module.exports = {
     areArgsValid,
     getNumberOfDays,
-    validatePath
+    validatePath,
+    validateEnv
 }

@@ -27,13 +27,28 @@ module.exports = class FileUtils {
         return files;
     }
 
-    findFileTarget(file, targetPath, ignore=[]) {
+    getPathToAppend(path) {
+        const fileEnts = this._fs.readdirSync(path, { withFileTypes: true });
+        let subDir;
+        for ( let i=0; i<fileEnts.length; i++ ) {
+            if (fileEnts[i].isDirectory() && fileEnts[i].name === 'src')
+                return '/src/main/plugins';
+            else if ( fileEnts[i].isDirectory() )
+                subDir = fileEnts[i].name;
+        };
+        return `/${subDir}/src/main/plugins`;
+    }
+
+    findFileTarget(file, targetPath, foldersToInclude) {
         let entries = this._fs.readdirSync(targetPath, {withFileTypes: true});
         let dirs = [];
+        let entryPath = '';
         entries.forEach(function(entry) {
-            if ( entry.isDirectory() && ignore.indexOf(entry.name) === -1 )
-                dirs.push(targetPath + '/' + entry.name);
-        });
+            if ( entry.isDirectory() && foldersToInclude.indexOf(entry.name) !== -1 ) {
+                entryPath = targetPath + '/' + entry.name;
+                dirs.push(entryPath + this.getPathToAppend(entryPath));
+            }
+        }, this);
 
         let paths = [];
         dirs.forEach(function(dir) {

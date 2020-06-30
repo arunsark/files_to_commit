@@ -1,79 +1,95 @@
 #!/usr/bin/env node
 const yargs = require('yargs');
-const path = require('path');
 const chalk = require('chalk');
-const findUp = require('find-up');
 const fs = require('fs');
-const glob = require('glob');
-
-var argv = yargs
-  .alias('d', 'days')
-  .describe('d', 'last how many days to consider')
-    .number('d')
-  .alias('i', 'include-files')
-  .describe('i', 'file patterns to include')
- .choices('i', ['sys_script', 'sys_script_include'])
-    .array('i')
-  .help('help')
-  .argv
-
-
-
+const FileUtils = require('./util/fileUtils.js');
+const validator = require('./util/validator.js');
 const log = console.log;
 
+function validate(argv) {
+    if ( !validator.validateEnv(process.env) ) {
+        log(chalk.bold.magenta('Environment variable COMMIT_REPOS not set'));
+        process.exit();
+    }
+    const argsValid = validator.areArgsValid(argv);
+    if ( Object.keys(argsValid).length !== 0 ) {
+        log(chalk.bold.magenta(argsValid.warn));
+        process.exit();
+    }
 
-log(chalk.bold.red('I choose the files...You build the code...'));
-
-const warning = chalk.keyword('orange');
-log(warning('Warning! '+argv.d + ' '+argv.i[0]+' '+argv.i[1]));
-
-log(process.cwd() +' '+path.dirname(process.cwd() +'/')+' '+path.basename(process.cwd()+'/'));
-
-const cwd = process.cwd();
-const fullPath = `${path.dirname(cwd)}/${path.basename(cwd)}`
-log(chalk.blue(fullPath));
-if ( fullPath.match(/.*glide\/update\/customer$/) ) {
-    log(chalk.bold.green('In right path'));
-//    process.exit();
+    const pathValid = validator.validatePath('glide/update/customer');
+    if ( Object.keys(pathValid).length !== 0 ) {
+        log(chalk.bold.magenta(pathValid.warn));
+        process.exit();
+    }
 }
 
-
-var files = [];
-fs.readdir(fullPath, function(err, items) {
-    let today = new Date();
-    for (var i=0; i<items.length; i++) {
-	let stats = fs.statSync(items[i]);
-	let d = new Date(stats.mtime);
-	if ( (today.getTime() - d.getTime()) <= (86400000*8) ) {
-	    console.log(`File modified ${stats.mtime} ${items[i]} ago`);
-	    files.push(items[i]);
-	}
+function run(days, repos) {
+    const fileUtils = FileUtils.create(fs);
+    const srcPath = process.cwd();
+    const files = fileUtils.getFiles(srcPath, days);
+    if ( files.length > 0 ) {
+        log(chalk.hex('#DEADED').bold('============================================='));
+        log(chalk.underline.hex('#C0C0C0').bold('Found following files'));
+        for ( let index in files )
+            log(chalk.bold.yellowBright(files[index]));
+        log(chalk.hex('#DEADED').bold('============================================='));
     }
-    const swd = 'glide';
-    files.forEach(function(file) {
-	log(chalk.underline(`Glob output ${file}`));
-	glob(`**/${file}`, {cwd: '/Users/arun.vydianathan/master/app-spend-catalog/src/main/plugins'}, function(err, matches) {
-	    if ( matches.length == 1 ) {
-		let dest = '/Users/arun.vydianathan/master/app-spend-catalog/src/main/plugins/' + path.dirname(matches[0]);
-		log(`Moving ${file} to ${dest}`);
-		fs.renameSync(file, dest + '/' + file);
-	    }
-	});
+    else {
+        log(chalk.hex('#DEADED').bold('============================================='));
+        log(chalk.blue.bgWhite('No files found to move'));
+        log(chalk.hex('#DEADED').bold('============================================='));
+    }
+
+    const basePathMatch = srcPath.match(/(.+)\/glide\/glide\/update\/customer/);
+    let netNewFiles = [];
+    let multiPaths = {};
+
+    files.forEach(function(file){
+        let paths = fileUtils.findFileTarget(file, basePathMatch[1], repos);
+        if ( paths.length == 0 )
+            netNewFiles.push(file);
+        else if ( paths.length > 1 )
+            multiPaths[file] = paths;
+        else {
+            log(chalk.greenBright(`Moving ${file} to ${paths[0]}`));
+            fileUtils.moveFile(file, srcPath, paths[0]);
+        }
     });
-});
 
-let dirs = [];
-fs.readdir('/Users/arun.vydianathan/master', {withFileTypes: true}, function(err, fileEnts) {
-    fileEnts.forEach(function(entry) {
-	if ( entry.isDirectory() && entry.name !== 'glide' )
-	    dirs.push('/Users/arun.vydianathan/master' + entry.name);
+    netNewFiles.forEach(function(file, index) {
+        if ( index == 0 ) {
+            log(chalk.hex('#DEADED').bold('============================================='));
+            log(chalk.underline.hex('#C0C0C0').bold('New files found'));
+        }
+        log(chalk.yellowBright(file));
     });
-});
+    if ( netNewFiles.length > 0 )
+        log(chalk.hex('#DEADED').bold('============================================='));
 
 
+    Object.keys(multiPaths).forEach(function(file, index) {
+        if ( index == 0 ) {
+            log(chalk.hex('#DEADED').bold('============================================='));
+            log(chalk.underline.hex('#C0C0C0').bold('Following files were found in multiple folders, move them manually to the right place'));
+        }
+        log(chalk.yellowBright(file));
+        multiPaths[file].forEach( (p) => { log(chalk.whiteBright(p)); });
+        log(chalk.hex('#DEADED').bold('----'));
+    });
 
+    if ( Object.keys(multiPaths).length > 0 )
+        log(chalk.hex('#DEADED').bold('============================================='));
 
+}
 
+var argv = yargs
+    .alias('d', 'days')
+    .describe('d', 'last how many days to consider')
+    .number('d')
+    .help('help')
+    .argv;
 
-log('CWD '+process.cwd());
-//log(chalk.magenta(entry.isDirectory()) +' ' + chalk.yellowBright(entry.name));
+validate(argv);
+log(chalk.bold.yellow('Scanning for files to commit....'));
+run(validator.getNumberOfDays(argv), process.env.COMMIT_REPOS.split(':'));
