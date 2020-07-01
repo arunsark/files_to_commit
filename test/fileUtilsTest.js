@@ -27,31 +27,45 @@ describe('fileUtils.js', function () {
   });
 
   describe('findFileTarget', function () {
+    let repos = [];
+
+    before(function() {
+      const basePath = `${process.cwd()}/test/src_fixture`;
+      repos = [ `${basePath}/app-fin-common`, `${basePath}/app-spend-catalog` ];
+    });
 
     beforeEach(function() {
       fs.writeFileSync(`${process.cwd()}/test/src_fixture/glide/update/customer/file1`, 'I am file1');
       fs.writeFileSync(`${process.cwd()}/test/src_fixture/glide/update/customer/file2`, 'I am file2');
       fs.writeFileSync(`${process.cwd()}/test/src_fixture/glide/update/customer/file3`, 'I am file3');
+      fs.writeFileSync(`${process.cwd()}/test/src_fixture/glide/update/customer/file4`, 'I am file4');
     });
 
     it('should return valid file targets', function () {
       const fileUtils = FileUtils.create(fs);
-      const ignore = ['glide'];
 
-      let targetPath = fileUtils.findFileTarget('file2', `${process.cwd()}/test/src_fixture`, ignore);
+      let targetPath = fileUtils.findFileTarget('file2', repos);
       assert.equal(targetPath.length, 1);
-      assert.equal(targetPath[0], `${process.cwd()}/test/src_fixture/app-spend-catalog/src/main`);
+      assert.equal(targetPath[0], `${process.cwd()}/test/src_fixture/app-spend-catalog/src/main/plugins/update`);
 
-      targetPath = fileUtils.findFileTarget('file1', `${process.cwd()}/test/src_fixture`, ignore);
+      targetPath = fileUtils.findFileTarget('file1', repos);
       assert.equal(targetPath.length, 1);
-      assert.equal(targetPath[0], `${process.cwd()}/test/src_fixture/app-fin-common/src/main`);
+      assert.equal(targetPath[0], `${process.cwd()}/test/src_fixture/app-fin-common/src/main/plugins/update`);
+    });
+
+    it('should return valid file targets for multi-matches', function() {
+      const fileUtils = FileUtils.create(fs);
+      let targetPath = fileUtils.findFileTarget('file4', repos);
+
+      assert.equal(targetPath.length, 2);
+      assert.equal(targetPath[0], `${process.cwd()}/test/src_fixture/app-fin-common/src/main/plugins/update`);
+      assert.equal(targetPath[1], `${process.cwd()}/test/src_fixture/app-spend-catalog/src/main/plugins/update`);
     });
 
     it('should return [] if file not found', function () {
       const fileUtils = FileUtils.create(fs);
-      const ignore = ['glide'];
 
-      let targetPath = fileUtils.findFileTarget('file34', `${process.cwd()}/test/src_fixture`, ignore);
+      let targetPath = fileUtils.findFileTarget('file34', repos);
       assert.equal(targetPath.length, 0);
     });
 

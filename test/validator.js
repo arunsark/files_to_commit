@@ -33,7 +33,7 @@ describe('validator.js', function () {
     });
 
     it('should not be valid if path does not match cwd', function () {
-      assert.deepEqual({warn: 'Not running in the correct path'}, validator.validatePath('foo/bar'));
+      assert.deepEqual({warn: 'Not running in the correct path. Run it from foo/bar'}, validator.validatePath('foo/bar'));
     });
   });
 });

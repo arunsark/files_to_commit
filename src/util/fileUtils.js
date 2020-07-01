@@ -39,19 +39,10 @@ module.exports = class FileUtils {
         return `/${subDir}/src/main/plugins`;
     }
 
-    findFileTarget(file, targetPath, foldersToInclude) {
-        let entries = this._fs.readdirSync(targetPath, {withFileTypes: true});
-        let dirs = [];
-        let entryPath = '';
-        entries.forEach(function(entry) {
-            if ( entry.isDirectory() && foldersToInclude.indexOf(entry.name) !== -1 ) {
-                entryPath = targetPath + '/' + entry.name;
-                dirs.push(entryPath + this.getPathToAppend(entryPath));
-            }
-        }, this);
-
+    findFileTarget(file, dirs) {
+        const repoSrcPaths = dirs.map( (dir) => { return `${dir}${this.getPathToAppend(dir)}`}, this);
         let paths = [];
-        dirs.forEach(function(dir) {
+        repoSrcPaths.forEach(function(dir) {
             glob.sync(`**/${file}`, {cwd: dir}).map(function(target) {
                 paths.push(`${dir}/${path.dirname(target)}`);
             });

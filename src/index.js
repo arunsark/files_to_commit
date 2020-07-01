@@ -45,8 +45,10 @@ function run(days, repos) {
     let netNewFiles = [];
     let multiPaths = {};
 
+    console.log(repos);
+
     files.forEach(function(file){
-        let paths = fileUtils.findFileTarget(file, basePathMatch[1], repos);
+        let paths = fileUtils.findFileTarget(file, repos);
         if ( paths.length == 0 )
             netNewFiles.push(file);
         else if ( paths.length > 1 )
